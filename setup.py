@@ -1,6 +1,7 @@
 import pathlib
 
 from setuptools import setup
+from setuptools import find_packages
 
 base_dir = pathlib.Path(__file__).resolve().parent
 
@@ -12,7 +13,7 @@ with open(base_dir / "README.md", "r") as f:
 
 setup(
     name="certbot-dns-hotline",
-    version="1.0.1",
+    version="0.1.0",
     description="Certbot DNS plugin for Hotline",
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -24,7 +25,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
     ],
-    packages=["attack_lookup"],
+    packages=find_packages(),
     python_requires=">=3.6",
     include_package_data=True,
     install_requires=deps,
