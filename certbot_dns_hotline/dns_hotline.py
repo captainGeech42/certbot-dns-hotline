@@ -58,6 +58,7 @@ class Authenticator(dns_common.DNSAuthenticator):
             self._configure("path", "Path to directory shared with the Hotline DNS callback service")
             self.path = self.conf("path")
 
+        logger.debug("getting client")
         return _HotlineDNSClient(
             self.path
         )
@@ -117,4 +118,7 @@ class _HotlineDNSClient(object):
         first_label = record_name.split(".")[0]
         fp = self._get_record_path(domain, first_label)
 
-        os.unlink(fp)
+        try:
+            os.unlink(fp)
+        except FileNotFoundError:
+            pass
