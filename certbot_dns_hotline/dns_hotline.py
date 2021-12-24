@@ -44,13 +44,11 @@ class Authenticator(dns_common.DNSAuthenticator):
         pass
 
     def _perform(self, domain, validation_name, validation):
-        logger.info(f"hotline._perform: domain={domain}, validation_name={validation_name}, validation={validation}")
         self._get_hotline_client().add_txt_record(
             domain, validation_name, validation
         )
 
     def _cleanup(self, domain, validation_name, validation):
-        logger.info(f"hotline._cleanup: domain={domain}, validation_name={validation_name}, validation={validation}")
         self._get_hotline_client().del_txt_record(
             domain, validation_name, validation
         )
@@ -59,8 +57,6 @@ class Authenticator(dns_common.DNSAuthenticator):
         if self.path is None:
             self._configure("path", "Path to directory shared with the Hotline DNS callback service")
             self.path = self.conf("path")
-
-        logger.info(f"getting hotline client, path={self.path}")
 
         return _HotlineDNSClient(
             self.path
@@ -103,7 +99,7 @@ class _HotlineDNSClient(object):
             self._make_record_dir(domain)
 
             with open(fp, "w") as f:
-                logger.info("writing record contents to disk")
+                logger.debug(f"Writing record contents to disk at {fp}")
                 f.write(record_content)
 
         except (FileNotFoundError, PermissionError) as e:
@@ -121,4 +117,4 @@ class _HotlineDNSClient(object):
         first_label = record_name.split(".")[0]
         fp = self._get_record_path(domain, first_label)
 
-        #os.unlink(fp)
+        os.unlink(fp)
