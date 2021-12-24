@@ -13,7 +13,7 @@ with open(base_dir / "README.md", "r") as f:
 
 setup(
     name="certbot-dns-hotline",
-    version="0.2.0",
+    version="0.3.0",
     description="Certbot DNS plugin for Hotline",
     long_description=readme,
     long_description_content_type="text/markdown",
