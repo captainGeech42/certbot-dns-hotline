@@ -11,7 +11,7 @@ Change the domains to match your callback domain, along with the `--dns-hotline-
 
 ```
 $ certbot certonly \
-    --authenticator dns-freedns \
+    --authenticator dns-hotline \
     --dns-hotline-path /hotline/acme \
     --server https://acme-v02.api.letsencrypt.org/directory \
     --agree-tos \

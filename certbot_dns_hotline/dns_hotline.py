@@ -4,6 +4,7 @@ import logging
 
 from certbot import errors
 from certbot import interfaces
+from certbot.compat import filesystem
 from certbot.compat import os
 from certbot.plugins import dns_common
 import zope.interface
@@ -43,17 +44,23 @@ class Authenticator(dns_common.DNSAuthenticator):
         pass
 
     def _perform(self, domain, validation_name, validation):
+        logger.info(f"hotline._perform: domain={domain}, validation_name={validation_name}, validation={validation}")
         self._get_hotline_client().add_txt_record(
             domain, validation_name, validation
         )
 
     def _cleanup(self, domain, validation_name, validation):
+        logger.info(f"hotline._cleanup: domain={domain}, validation_name={validation_name}, validation={validation}")
         self._get_hotline_client().del_txt_record(
             domain, validation_name, validation
         )
 
     def _get_hotline_client(self):
-        self._configure("path", "Path to directory shared with the Hotline DNS callback service")
+        if self.path is None:
+            self._configure("path", "Path to directory shared with the Hotline DNS callback service")
+            self.path = self.conf("path")
+
+        logger.info(f"getting hotline client, path={self.path}")
 
         return _HotlineDNSClient(
             self.path
@@ -68,8 +75,15 @@ class _HotlineDNSClient(object):
         logger.debug("creating hotline client")
         self.path = path
 
-    def _get_record_path(self, record_name):
-        return os.path.join(self.path, record_name)
+    def _make_record_dir(self, domain):
+        """Make sure the directory records will be stored in exists."""
+        dir_path = os.path.join(self.path, domain)
+        if not os.path.exists(dir_path):
+            filesystem.mkdir(dir_path)
+
+    def _get_record_path(self, domain, record_name):
+        """Build the path to the file where the verification data will be stored."""
+        return os.path.join(self.path, domain, record_name)
     
     def add_txt_record(self, domain, record_name, record_content):
         """
@@ -80,10 +94,18 @@ class _HotlineDNSClient(object):
         :raises certbot.errors.PluginError: if an error occurs communicating with Hotline
         """
         try:
-            fp = self._get_record_path(record_name)
+            # record_name is the full DNS record, including the domain
+            # we just want the first label for the filepath
+            first_label = record_name.split(".")[0]
+
+            fp = self._get_record_path(domain, first_label)
+
+            self._make_record_dir(domain)
+
             with open(fp, "w") as f:
                 logger.info("writing record contents to disk")
                 f.write(record_content)
+
         except (FileNotFoundError, PermissionError) as e:
             raise errors.PluginError(f"Failed to write TXT record contents to {fp}")
 
@@ -96,5 +118,7 @@ class _HotlineDNSClient(object):
         :raises certbot.errors.PluginError: if an error occurs communicating with Hotline
         """
 
-        fp = self._get_record_path(record_name)
-        os.unlink(fp)
+        first_label = record_name.split(".")[0]
+        fp = self._get_record_path(domain, first_label)
+
+        #os.unlink(fp)

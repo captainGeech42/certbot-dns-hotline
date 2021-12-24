@@ -1,3 +1,8 @@
 FROM certbot/certbot
 
-RUN pip install certbot-dns-hotline
+RUN mkdir /dns-hotline
+WORKDIR /dns-hotline
+
+COPY . .
+
+RUN python setup.py install
