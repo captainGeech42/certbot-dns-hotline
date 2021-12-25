@@ -1,5 +1,6 @@
 """DNS Authenticator for Hotline"""
 
+import hashlib
 import logging
 
 from certbot import errors
@@ -72,15 +73,17 @@ class _HotlineDNSClient(object):
         logger.debug("creating hotline client")
         self.path = path
 
-    def _make_record_dir(self, domain):
-        """Make sure the directory records will be stored in exists."""
+    def _get_record_path(self, domain, record_hash):
+        """Build the path to the file where the verification data will be stored."""
+
         dir_path = os.path.join(self.path, domain)
         if not os.path.exists(dir_path):
             filesystem.mkdir(dir_path)
 
-    def _get_record_path(self, domain, record_name):
-        """Build the path to the file where the verification data will be stored."""
-        return os.path.join(self.path, domain, record_name)
+        return os.path.join(self.path, domain, record_hash)
+
+    def _hash_value(self, val):
+        return hashlib.sha256(val.encode()).hexdigest()
     
     def add_txt_record(self, domain, record_name, record_content):
         """
@@ -91,13 +94,11 @@ class _HotlineDNSClient(object):
         :raises certbot.errors.PluginError: if an error occurs communicating with Hotline
         """
         try:
-            # record_name is the full DNS record, including the domain
-            # we just want the first label for the filepath
-            first_label = record_name.split(".")[0]
+            # get the hash of the record contents
+            # this is used in the filepath to ensure its idempotent, unique, and a valid name
+            record_hash = self._hash_value(record_content)
 
-            fp = self._get_record_path(domain, first_label)
-
-            self._make_record_dir(domain)
+            fp = self._get_record_path(record_name, record_hash)
 
             with open(fp, "w") as f:
                 logger.debug(f"Writing record contents to disk at {fp}")
@@ -114,11 +115,13 @@ class _HotlineDNSClient(object):
         :param str record_content: The record content (typically the challenge validation).
         :raises certbot.errors.PluginError: if an error occurs communicating with Hotline
         """
+        
+        record_hash = self._hash_value(record_content)
 
-        first_label = record_name.split(".")[0]
-        fp = self._get_record_path(domain, first_label)
+        fp = self._get_record_path(record_name, record_hash)
 
         try:
+            logger.debug(f"Removing record contents at {fp}")
             os.unlink(fp)
         except FileNotFoundError:
             pass
